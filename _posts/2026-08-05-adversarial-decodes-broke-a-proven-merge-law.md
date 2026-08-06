@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Adversarial decodes broke a proven merge law: what Kani could and could not reach"
+title: "The Lean proof was correct. The Rust still had a bug."
 ---
 
 [bitrep](https://github.com/KyleClouthier/bitrep) is a Rust crate with one promise: a floating-point
@@ -12,8 +12,18 @@ That promise rests on an algebra. Merging two accumulators has to commute and as
 codec has to round-trip, and the state has to be independent of insertion order. Those laws are
 proved at the model level in Lean 4.
 
-The Lean proof was correct. The Rust still had a bug, and the bug was only reachable through byte
-strings no honest encoder can produce.
+**The Lean proof was correct. The Rust still had a bug.**
+
+That sentence is the whole post, so it is worth saying plainly up front. A proof about a model tells
+you nothing about the code underneath it unless something connects the two. The model can be
+flawless while the implementation meant to realise it is wrong, and re-checking the model will never
+tell you, because the model is not where the mistake is.
+
+**Kani is what connected them, and Kani is what caught it.** A harness ranging over arbitrary bytes,
+instead of over honestly-built values, returned a counterexample in seconds: a pair of accumulator
+states, reachable only by decoding, for which a merge law proved in Lean is false in the Rust. No
+test suite built on the crate's own API could have reached those states, and that is not a criticism
+of the test suite. It is a statement about which inputs a test suite can construct.
 
 ## The bug
 
@@ -137,6 +147,17 @@ Rust drifts away from it, and nothing at the model level will notice.
 models slowly, so its correct rounding is checked against a BigInt oracle, NIST StRD datasets, and
 golden cross-architecture vectors instead. The fuzzer has found real bugs of its own, including two
 decoder defects in the crate's quantile sketch, and the changelog records which tool found which.
+
+On cadence, since the three layers cost very different amounts: the six fast Kani harnesses run on
+**every push**, and the fuzz targets run **nightly** on a schedule, bounded, because a useful fuzz
+run is measured in hours and a useful Kani run here is measured in seconds. All three layers landed
+in the same commit, so this was not fuzz-first with proofs bolted on later; the boundaries were
+drawn before any of them were written, which is what made it obvious which tool owed which property.
+
+One honest wrinkle, in the same spirit as the harness count above: five fuzz targets exist and the
+nightly matrix runs three of them. The two that are not scheduled are the two that historically
+found bugs. That is the same gap between what exists and what runs, one layer down, and I noticed it
+while writing this paragraph.
 
 That division is written into the harness module's header so a reader cannot mistake one for the
 other:
