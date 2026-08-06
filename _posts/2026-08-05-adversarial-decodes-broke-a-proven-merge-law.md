@@ -59,6 +59,8 @@ B:  seen = false,  min_bits = 0xFFFF_FFFF_FFFF_FFFE
 B's bits. Both results are still empty and logically identical, and **they serialise to different
 bytes.** Merge commutativity, stated over the encoded state, is false.
 
+<img src="{{site.baseurl | prepend: site.url}}/assets/images/bitrep-empty-state-merge.svg" alt="Two empty accumulator states differing only in min_bits, a field the merge never reads. Both merge orders short-circuit on the empty check and keep the receiver's bits, so the two results serialise to different byte strings while meaning the same thing." />
+
 No accumulator built by adding numbers can be in that state, because `add` always writes canonical
 zeros there. The only way to construct it is to decode it from bytes. So a test suite that builds
 accumulators honestly, merges them in both orders, and compares, will never find this. Not because
